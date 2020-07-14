@@ -11,25 +11,48 @@
 #include "../host/sgx/enclave.h"
 #include "oe_err.h"
 #include "oeinfo.h"
+#include <openenclave/corelibc/string.h>
+
+typedef struct _optional_bool
+{
+    bool has_value;
+    bool value;
+} optional_bool_t;
+
+typedef struct _optional_uint64
+{
+    bool has_value;
+    uint64_t value;
+} optional_uint64_t;
+
+typedef struct _optional_uint16
+{
+    bool has_value;
+    uint16_t value;
+} optional_uint16_t;
+
+typedef struct _optional_oe_uuid_t
+{
+    bool has_value;
+    oe_uuid_t value;
+} optional_oe_uuid_t;
 
 // Options loaded from .conf file. Uninitialized fields contain the maximum
 // integer value for the corresponding type.
 typedef struct _config_file_options
 {
-    bool debug;
-    uint64_t num_heap_pages;
-    uint64_t num_stack_pages;
-    uint64_t num_tcs;
-    uint16_t product_id;
-    uint16_t security_version;
+    optional_bool_t debug;
+    optional_bool_t kss;
+    optional_uint64_t num_heap_pages;
+    optional_uint64_t num_stack_pages;
+    optional_uint64_t num_tcs;
+    optional_uint16_t product_id;
+    optional_uint16_t security_version;
+    optional_oe_uuid_t isv_family_id;
+    optional_oe_uuid_t isv_ext_product_id;
 } config_file_options_t;
 
-#define CONFIG_FILE_OPTIONS_INITIALIZER                                 \
-    {                                                                   \
-        .debug = false, .num_heap_pages = OE_UINT64_MAX,                \
-        .num_stack_pages = OE_UINT64_MAX, .num_tcs = OE_UINT64_MAX,     \
-        .product_id = OE_UINT16_MAX, .security_version = OE_UINT16_MAX, \
-    }
+int uuid_from_string(str_t* str, uint8_t* uuid, size_t expected_size);
 
 static int _load_config_file(const char* path, config_file_options_t* options)
 {
@@ -80,6 +103,12 @@ static int _load_config_file(const char* path, config_file_options_t* options)
         {
             uint64_t value;
 
+            if (options->debug.has_value)
+            {
+                oe_err("%s(%zu): Duplicate 'Debug' value provided", path, line);
+                goto done;
+            }
+
             // Debug must be 0 or 1
             if (str_u64(&rhs, &value) != 0 || (value > 1))
             {
@@ -87,11 +116,41 @@ static int _load_config_file(const char* path, config_file_options_t* options)
                 goto done;
             }
 
-            options->debug = (bool)value;
+            options->debug.value = (bool)value;
+            options->debug.has_value = true;
+        }
+        else if (strcmp(str_ptr(&lhs), "Kss") == 0)
+        {
+            uint64_t value;
+
+            if (options->kss.has_value)
+            {
+                oe_err("%s(%zu): Duplicate 'Kss' value provided", path, line);
+                goto done;
+            }
+
+            // Debug must be 0 or 1
+            if (str_u64(&rhs, &value) != 0 || (value > 1))
+            {
+                oe_err("%s(%zu): 'Kss' value must be 0 or 1", path, line);
+                goto done;
+            }
+
+            options->kss.value = (bool)value;
+            options->kss.has_value = true;
         }
         else if (strcmp(str_ptr(&lhs), "NumHeapPages") == 0)
         {
             uint64_t n;
+
+            if (options->num_heap_pages.has_value)
+            {
+                oe_err(
+                    "%s(%zu): Duplicate 'NumHeapPages' value provided",
+                    path,
+                    line);
+                goto done;
+            }
 
             if (str_ptr(&rhs)[0] == '-' || str_u64(&rhs, &n) != 0 ||
                 !oe_sgx_is_valid_num_heap_pages(n))
@@ -104,11 +163,21 @@ static int _load_config_file(const char* path, config_file_options_t* options)
                 goto done;
             }
 
-            options->num_heap_pages = n;
+            options->num_heap_pages.value = n;
+            options->num_heap_pages.has_value = true;
         }
         else if (strcmp(str_ptr(&lhs), "NumStackPages") == 0)
         {
             uint64_t n;
+
+            if (options->num_stack_pages.has_value)
+            {
+                oe_err(
+                    "%s(%zu): Duplicate 'NumStackPages' value provided",
+                    path,
+                    line);
+                goto done;
+            }
 
             if (str_ptr(&rhs)[0] == '-' || str_u64(&rhs, &n) != 0 ||
                 !oe_sgx_is_valid_num_stack_pages(n))
@@ -121,11 +190,19 @@ static int _load_config_file(const char* path, config_file_options_t* options)
                 goto done;
             }
 
-            options->num_stack_pages = n;
+            options->num_stack_pages.value = n;
+            options->num_stack_pages.has_value = true;
         }
         else if (strcmp(str_ptr(&lhs), "NumTCS") == 0)
         {
             uint64_t n;
+
+            if (options->num_tcs.has_value)
+            {
+                oe_err(
+                    "%s(%zu): Duplicate 'NumTCS' value provided", path, line);
+                goto done;
+            }
 
             if (str_ptr(&rhs)[0] == '-' || str_u64(&rhs, &n) != 0 ||
                 !oe_sgx_is_valid_num_tcs(n))
@@ -138,11 +215,21 @@ static int _load_config_file(const char* path, config_file_options_t* options)
                 goto done;
             }
 
-            options->num_tcs = n;
+            options->num_tcs.value = n;
+            options->num_tcs.has_value = true;
         }
         else if (strcmp(str_ptr(&lhs), "ProductID") == 0)
         {
             uint16_t n;
+
+            if (options->product_id.has_value)
+            {
+                oe_err(
+                    "%s(%zu): Duplicate 'ProductID' value provided",
+                    path,
+                    line);
+                goto done;
+            }
 
             if (str_ptr(&rhs)[0] == '-' || str_u16(&rhs, &n) != 0 ||
                 !oe_sgx_is_valid_product_id(n))
@@ -155,11 +242,21 @@ static int _load_config_file(const char* path, config_file_options_t* options)
                 goto done;
             }
 
-            options->product_id = n;
+            options->product_id.value = n;
+            options->product_id.has_value = true;
         }
         else if (strcmp(str_ptr(&lhs), "SecurityVersion") == 0)
         {
             uint16_t n;
+
+            if (options->security_version.has_value)
+            {
+                oe_err(
+                    "%s(%zu): Duplicate 'SecurityVersion' value provided",
+                    path,
+                    line);
+                goto done;
+            }
 
             if (str_ptr(&rhs)[0] == '-' || str_u16(&rhs, &n) != 0 ||
                 !oe_sgx_is_valid_security_version(n))
@@ -172,7 +269,70 @@ static int _load_config_file(const char* path, config_file_options_t* options)
                 goto done;
             }
 
-            options->security_version = n;
+            options->security_version.value = n;
+            options->security_version.has_value = true;
+        }
+        else if (strcmp(str_ptr(&lhs), "IsvFamilyID") == 0)
+        {
+            oe_uuid_t id;
+
+            if (options->isv_family_id.has_value)
+            {
+                oe_err(
+                    "%s(%zu): Duplicate 'IsvFamilyID' value provided",
+                    path,
+                    line);
+                goto done;
+            }
+
+            if (str_len(&rhs) > 1)
+            {
+                int rc = uuid_from_string(&rhs, id.b, sizeof(id.b));
+                if (rc != 0)
+                {
+                    oe_err(
+                        "%s(%zu): bad value for 'IsvFamilyID': %s, rc=%d",
+                        path,
+                        line,
+                        str_ptr(&rhs),
+                        rc);
+                    goto done;
+                }
+            }
+
+            memcpy(&options->isv_family_id.value, &id, sizeof(id));
+            options->isv_family_id.has_value = true;
+        }
+        else if (strcmp(str_ptr(&lhs), "IsvExtProductID") == 0)
+        {
+            oe_uuid_t id;
+
+            if (options->isv_ext_product_id.has_value)
+            {
+                oe_err(
+                    "%s(%zu): Duplicate 'IsvExtProductID' value provided",
+                    path,
+                    line);
+                goto done;
+            }
+
+            if (str_len(&rhs) > 1)
+            {
+                int rc = uuid_from_string(&rhs, id.b, sizeof(id.b));
+                if (rc != 0)
+                {
+                    oe_err(
+                        "%s(%zu): bad value for 'IsvExtProductID': %s, rc=%d",
+                        path,
+                        line,
+                        str_ptr(&rhs),
+                        rc);
+                    goto done;
+                }
+            }
+
+            memcpy(&options->isv_ext_product_id.value, &id, sizeof(id));
+            options->isv_ext_product_id.has_value = true;
         }
         else
         {
@@ -296,30 +456,59 @@ void _merge_config_file_options(
     }
 
     /* Debug option is present */
-    if (options->debug)
-        properties->config.attributes |= SGX_FLAGS_DEBUG;
+    if (options->debug.has_value)
+    {
+        if (options->debug.value)
+            properties->config.attributes |= SGX_FLAGS_DEBUG;
+        else
+            properties->config.attributes &= ~SGX_FLAGS_DEBUG;
+    }
+
+    /* Kss option is present */
+    if (options->kss.has_value)
+    {
+        if (options->kss.value)
+            properties->config.attributes |= SGX_FLAGS_KSS;
+        else
+            properties->config.attributes &= ~SGX_FLAGS_KSS;
+    }
 
     /* If ProductID option is present */
-    if (options->product_id != OE_UINT16_MAX)
-        properties->config.product_id = options->product_id;
+    if (options->product_id.has_value)
+        properties->config.product_id = options->product_id.value;
 
     /* If SecurityVersion option is present */
-    if (options->security_version != OE_UINT16_MAX)
-        properties->config.security_version = options->security_version;
+    if (options->security_version.has_value)
+        properties->config.security_version = options->security_version.value;
+
+    if (options->kss.has_value && options->kss.value)
+    {
+        if (options->isv_family_id.has_value)
+            memcpy(
+                properties->config.isv_family_id,
+                &options->isv_family_id.value,
+                sizeof(options->isv_family_id.value));
+
+        if (options->isv_ext_product_id.has_value)
+            memcpy(
+                properties->config.isv_ext_product_id,
+                &options->isv_ext_product_id.value,
+                 sizeof(options->isv_ext_product_id.value));
+    }
 
     /* If NumHeapPages option is present */
-    if (options->num_heap_pages != OE_UINT64_MAX)
+    if (options->num_heap_pages.has_value)
         properties->header.size_settings.num_heap_pages =
-            options->num_heap_pages;
+            options->num_heap_pages.value;
 
     /* If NumStackPages option is present */
-    if (options->num_stack_pages != OE_UINT64_MAX)
+    if (options->num_stack_pages.has_value)
         properties->header.size_settings.num_stack_pages =
-            options->num_stack_pages;
+            options->num_stack_pages.value;
 
     /* If NumTCS option is present */
-    if (options->num_tcs != OE_UINT64_MAX)
-        properties->header.size_settings.num_tcs = options->num_tcs;
+    if (options->num_tcs.has_value)
+        properties->header.size_settings.num_tcs = options->num_tcs.value;
 }
 
 oe_result_t _initialize_enclave_properties(
@@ -328,7 +517,7 @@ oe_result_t _initialize_enclave_properties(
     oe_sgx_enclave_properties_t* properties)
 {
     oe_result_t result = OE_INVALID_PARAMETER;
-    config_file_options_t options = CONFIG_FILE_OPTIONS_INITIALIZER;
+    config_file_options_t options = {{0}};
 
     /* Load the configuration file */
     if (conffile && _load_config_file(conffile, &options) != 0)
@@ -471,6 +660,8 @@ int oesign(
                 engine_id,
                 engine_load_path,
                 key_id,
+                properties.config.isv_family_id,
+                properties.config.isv_ext_product_id,
                 (sgx_sigstruct_t*)properties.sigstruct),
             "oe_sgx_sign_enclave_from_engine() failed: result=%s (%#x)",
             oe_result_str(result),
@@ -542,6 +733,8 @@ int oesign(
                 properties.config.security_version,
                 pem_data,
                 pem_size,
+                properties.config.isv_family_id,
+                properties.config.isv_ext_product_id,
                 (sgx_sigstruct_t*)properties.sigstruct),
             "oe_sgx_sign_enclave() failed: result=%s (%#x)",
             oe_result_str(result),
@@ -587,6 +780,8 @@ int oedigest(const char* enclave, const char* conffile, const char* digest_file)
             properties.config.attributes,
             properties.config.product_id,
             properties.config.security_version,
+            properties.config.isv_family_id,
+            properties.config.isv_ext_product_id,
             &digest),
         "oe_sgx_get_sigstruct_digest(): result=%s (%#x)",
         oe_result_str(result),
@@ -599,4 +794,78 @@ int oedigest(const char* enclave, const char* conffile, const char* digest_file)
 
 done:
     return ret;
+}
+
+char hexchar2int(char ch)
+{
+    if (ch >= '0' && ch <= '9')
+        return ch - '0';
+    if (ch >= 'a' && ch <= 'f')
+        return 10 + ch - 'a';
+    if (ch >= 'A' && ch <= 'F')
+        return 10 + ch - 'A';
+    return 0;
+}
+
+ bool is_hex(char ch)
+{
+    return (ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'f') ||
+           (ch >= 'A' && ch <= 'F');
+}
+
+unsigned char hexpair2char(char a, char b)
+{
+    return (unsigned char)((hexchar2int(a) << 4) | hexchar2int(b));
+}
+
+int uuid_from_string(str_t* str, uint8_t* uuid, size_t expected_size)
+{
+    size_t index = 0;
+    size_t size = 0;
+    char* id_copy;
+    char value = 0;
+    bool firstDigit = true;
+
+    id_copy = oe_strdup(str_ptr(str));
+    if (!id_copy)
+        return -1;
+
+    size = strlen(id_copy);
+    if (size != 36)
+    {
+        oe_free(id_copy);
+        return -1;
+    }
+
+    index = 0;
+
+    for (size_t i = 0; i < size; ++i)
+    {
+        if (id_copy[i] == '-')
+            continue;
+
+        if (index >= expected_size || !is_hex(id_copy[i]))
+        {
+            oe_free(id_copy);
+            return -1;
+        }
+
+        if (firstDigit)
+        {
+            value = id_copy[i];
+            firstDigit = false;
+        }
+        else
+        {
+            uuid[index++] = hexpair2char(value, id_copy[i]);
+            firstDigit = true;
+        }
+    }
+    if (index < expected_size)
+    {
+        oe_free(id_copy);
+        return -1;
+    }
+	oe_free(id_copy);
+    return 0;
 }

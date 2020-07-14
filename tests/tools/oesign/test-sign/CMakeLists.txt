@@ -107,3 +107,88 @@ set_tests_properties(
   PROPERTIES
     PASS_REGULAR_EXPRESSION
     "ERROR: Invalid enclave property value: header.size_settings.num_tcs")
+
+# Test invalid config file with invalid debug value specified
+add_test(
+  NAME tests/oesign-sign-debug-out-of-range
+  COMMAND
+    oesign sign -e $<TARGET_FILE:oesign_test_enc> -c
+    ${OESIGN_TEST_INPUTS_DIR}/debug_out_of_range.conf -k
+    ${OESIGN_TEST_INPUTS_DIR}/sign_key.private.pem)
+
+set_tests_properties(
+  tests/oesign-sign-debug-out-of-range
+  PROPERTIES PASS_REGULAR_EXPRESSION "'Debug' value must be 0 or 1")
+
+# Test invalid config file with invalid syntax "Debug" --> "debug"
+add_test(
+  NAME tests/oesign-sign-lowercase-debug-property
+  COMMAND
+    oesign sign -e $<TARGET_FILE:oesign_test_enc> -c
+    ${OESIGN_TEST_INPUTS_DIR}/lowercase_debug_property.conf -k
+    ${OESIGN_TEST_INPUTS_DIR}/sign_key.private.pem)
+
+set_tests_properties(tests/oesign-sign-lowercase-debug-property
+                     PROPERTIES PASS_REGULAR_EXPRESSION "unknown setting")
+
+# Test valid kss properties argument
+set(OESIGN_SIGN_VALID_KSS
+    "[-c,${OESIGN_TEST_INPUTS_DIR}/kss_valid.conf,-k,${OESIGN_TEST_INPUTS_DIR}/sign_key.private.pem]"
+)
+
+add_test(
+  NAME tests/oesign-sign-valid-kss
+  COMMAND
+    python sign-and-verify.py --host-path $<TARGET_FILE:oesign_test_host>
+    --enclave-path $<TARGET_FILE:oesign_test_enc> --oesign-path
+    $<TARGET_FILE:oesign> --oesign-args ${OESIGN_SIGN_VALID_KSS})
+
+set_tests_properties(
+  tests/oesign-sign-valid-kss
+  PROPERTIES
+    PASS_REGULAR_EXPRESSION "PASS: Launch of signed enclave succeeded")
+
+# Test invalid kss properties argument ExtProdID too long
+add_test(NAME tests/oesign-sign-extprodid-toolong
+         COMMAND oesign sign -e $<TARGET_FILE:oesign_test_enc> -c
+                 ${OESIGN_TEST_INPUTS_DIR}/ext_prod_id_too_long.conf -k
+    ${OESIGN_TEST_INPUTS_DIR}/sign_key.private.pem)
+
+set_tests_properties(
+  tests/oesign-sign-extprodid-toolong
+  PROPERTIES
+    PASS_REGULAR_EXPRESSION "bad value for 'IsvExtProductID'")
+
+# Test invalid kss properties argument ExtProdID too short
+add_test(NAME tests/oesign-sign-extprodid-tooshort
+         COMMAND oesign sign -e $<TARGET_FILE:oesign_test_enc> -c
+                 ${OESIGN_TEST_INPUTS_DIR}/ext_prod_id_too_short.conf -k
+    ${OESIGN_TEST_INPUTS_DIR}/sign_key.private.pem)
+
+set_tests_properties(
+  tests/oesign-sign-extprodid-tooshort
+  PROPERTIES
+    PASS_REGULAR_EXPRESSION "bad value for 'IsvExtProductID'")
+
+# Test invalid kss properties argument -ExtProdID too short
+add_test(NAME tests/oesign-sign-familyid-toolong
+         COMMAND oesign sign -e $<TARGET_FILE:oesign_test_enc> -c
+                 ${OESIGN_TEST_INPUTS_DIR}/family_id_too_long.conf -k
+    ${OESIGN_TEST_INPUTS_DIR}/sign_key.private.pem)
+
+set_tests_properties(
+  tests/oesign-sign-familyid-toolong
+  PROPERTIES
+    PASS_REGULAR_EXPRESSION "bad value for 'IsvFamilyID'")
+
+
+# Test invalid kss properties argument -FamilyID too short
+add_test(NAME tests/oesign-sign-familyid-tooshort
+         COMMAND oesign sign -e $<TARGET_FILE:oesign_test_enc> -c
+                 ${OESIGN_TEST_INPUTS_DIR}/family_id_too_short.conf -k
+    ${OESIGN_TEST_INPUTS_DIR}/sign_key.private.pem)
+
+set_tests_properties(
+  tests/oesign-sign-familyid-tooshort
+  PROPERTIES
+    PASS_REGULAR_EXPRESSION "bad value for 'IsvFamilyID'")

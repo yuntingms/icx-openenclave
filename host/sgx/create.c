@@ -807,6 +807,11 @@ oe_result_t oe_sgx_build_enclave(
     OE_CHECK(_calculate_enclave_size(
         image_size, &props, &enclave_end, &enclave_size));
 
+    if (props.config.attributes & OE_SGX_FLAGS_KSS)
+    {
+        context->attributes.flags |= OE_SGX_FLAGS_KSS;
+    }
+
     /* Perform the ECREATE operation */
     OE_CHECK(oe_sgx_create_enclave(
         context, enclave_size, enclave_end, &enclave_addr));
@@ -1008,7 +1013,13 @@ oe_result_t oe_create_enclave(
     OE_CHECK(_initialize_enclave(enclave));
 
     /* Setup logging configuration */
-    oe_log_enclave_init(enclave);
+    if (oe_log_enclave_init(enclave) == OE_UNSUPPORTED)
+    {
+        oe_log(
+            OE_LOG_LEVEL_WARNING,
+            "The in-enclave logging is not supported. To enable, please import "
+            "the logging.edl.\n");
+    }
 
     /* Apply the list of settings to the enclave.
      * This may initialize switchless manager too.
