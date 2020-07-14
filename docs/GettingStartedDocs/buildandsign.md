@@ -97,6 +97,19 @@ NumHeapPages=1024
 NumStackPages=1024
 NumTCS=1
 ```
+Additionally, a developer can specify additional Key Sharing and Separation (KSS) 
+identity properties for use on the platforms that support it:
+- **FamilyID**: The product family identity (ISVFAMILYID) a developer can specify 
+to group different enclaves under a common identity. For example, an identifier for 
+the application suite which includes several enclave apps.
+- **ExtendedProductID**: The extended product identity (ISVEXTPRODID) value that 
+a developer can use as 128-bit globally unique identifier for the enclave where 
+the 16-bit ProductID proves too restrictive.
+For example, in kss_valid.conf:
+```
+FamilyID=47183823-2574-4bfd-b411-99ed177d3e43
+ExtendedProductID=47183823-2574-4bfd-b411-99ed177d3e43
+``` 
 
 As a convenience, you can also specify the enclave properties in code using the
 `OE_SET_ENCLAVE_SGX` macro.  For example, the equivalent properties could be
