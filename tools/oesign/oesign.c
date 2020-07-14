@@ -869,6 +869,6 @@ int uuid_from_string(str_t* str, uint8_t* uuid, size_t expected_size)
         free(id_copy);
         return -1;
     }
-    oe_free(id_copy);
+    free(id_copy);
     return 0;
 }
