@@ -13,8 +13,9 @@
 #include "oeinfo.h"
 #include <openenclave/corelibc/string.h>
 
-+#ifndef _WIN32
-+#define _strdup strdup
+#ifndef _WIN32
+#define _strdup strdup
+#endif
 
 typedef struct _optional_bool
 {
@@ -869,6 +870,6 @@ int uuid_from_string(str_t* str, uint8_t* uuid, size_t expected_size)
         free(id_copy);
         return -1;
     }
-    oe_free(id_copy);
+    free(id_copy);
     return 0;
 }
