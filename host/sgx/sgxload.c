@@ -3,7 +3,7 @@
 
 #include "sgxload.h"
 #if !defined(OEHOSTMR)
-#include <sgx_enclave_common.h>
+#include "sgx_enclave_common_wrapper.h"
 #endif // OEHOSTMR
 #if defined(__linux__)
 #include <sys/mman.h>
@@ -295,7 +295,7 @@ static oe_result_t _sgx_free_enclave_memory(
     if (!is_simulation)
     {
         uint32_t enclave_error = 0;
-        if (!enclave_delete(addr, &enclave_error) || enclave_error != 0)
+        if (!oe_sgx_enclave_delete(addr, &enclave_error) || enclave_error != 0)
         {
             OE_TRACE_ERROR(
                 "enclave_delete failed with enclave_error=%d", enclave_error);
@@ -469,7 +469,7 @@ oe_result_t oe_sgx_create_enclave(
     else
     {
         uint32_t enclave_error;
-        void* base = enclave_create(
+        void* base = oe_sgx_enclave_create(
             NULL, /* Let OS choose the enclave base address */
             secs->size,
             enclave_commit_size,
@@ -696,7 +696,7 @@ oe_result_t oe_sgx_load_enclave_data(
             protect |= ENCLAVE_PAGE_UNVALIDATED;
 
         uint32_t enclave_error;
-        if (enclave_load_data(
+        if (oe_sgx_enclave_load_data(
                 (void*)addr,
                 OE_PAGE_SIZE,
                 (const void*)src,
@@ -747,7 +747,7 @@ oe_result_t oe_sgx_initialize_enclave(
         OE_CHECK(_get_sig_struct(properties, mrenclave, &sigstruct));
 
         uint32_t enclave_error = 0;
-        if (!enclave_initialize(
+        if (!oe_sgx_enclave_initialize(
                 (void*)addr,
                 (const void*)&sigstruct,
                 sizeof(sgx_sigstruct_t),

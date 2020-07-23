@@ -24,10 +24,9 @@ if (LVI_MITIGATION MATCHES ControlFlow AND LVI_MITIGATION_SKIP_TESTS)
   message("LVI_MITIGATION_SKIP_TESTS set - skip all tests with LVI mitigation")
 endif ()
 
+# Define the `OE_SGX` macro used by the oeedger8r on the SGX build.
 if (OE_SGX)
-  set(PLATFORM_EDL_DIR ${PROJECT_SOURCE_DIR}/include/openenclave/edl/sgx)
-elseif (OE_TRUSTZONE)
-  set(PLATFORM_EDL_DIR ${PROJECT_SOURCE_DIR}/include/openenclave/edl/optee)
+  set(DEFINE_OE_SGX "-DOE_SGX")
 endif ()
 
 add_subdirectory(mem)
@@ -55,24 +54,30 @@ if (OE_SGX)
   else ()
     message("The C++ compiler cannot compile snmalloc. Skipping snmalloc test.")
   endif ()
+
+  if (USE_DEBUG_MALLOC)
+    add_subdirectory(debug_malloc)
+  endif ()
 endif ()
 
 if (UNIX
     OR ADD_WINDOWS_ENCLAVE_TESTS
     OR USE_CLANGW)
   if (OE_SGX)
-    if (BUfILD_ENCLAVES)
+    if (BUILD_ENCLAVES)
       # Disable the memory test for the scenario of building the enclave in Linux and running
       # it on Windows because of the mismatch on the enclave heap size configuration.
       add_subdirectory(memory)
       add_subdirectory(tls_e2e)
     endif ()
 
+    add_subdirectory(abi)
     add_subdirectory(abortStatus)
     add_subdirectory(argv)
     add_subdirectory(atexit)
     add_subdirectory(attestation_cert_apis)
     add_subdirectory(attestation_plugin)
+    add_subdirectory(attestation_plugin_cert)
     add_subdirectory(backtrace)
     if (NOT USE_SNMALLOC)
       add_subdirectory(bigmalloc)
@@ -129,6 +134,7 @@ if (UNIX
   add_subdirectory(c99_compliant)
   add_subdirectory(create-errors)
   add_subdirectory(crypto)
+  add_subdirectory(edl_opt_out)
   add_subdirectory(hexdump)
   add_subdirectory(hostcalls)
   add_subdirectory(initializers)
