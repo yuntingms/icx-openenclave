@@ -35,6 +35,11 @@ typedef struct _optional_uint16
     uint16_t value;
 } optional_uint16_t;
 
+typedef struct _optional_oe_uuid_t
+{
+    bool has_value;
+    oe_uuid_t value;
+} optional_oe_uuid_t;
 
 // Options loaded from .conf file. Uninitialized fields contain the maximum
 // integer value for the corresponding type.
