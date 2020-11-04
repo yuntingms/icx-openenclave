@@ -446,13 +446,13 @@ oe_result_t generate_sgx_report(oe_enclave_t* enclave, bool verbose)
 
             oe_sgx_endorsement_item crl_pck_cert =
                 endorsements.items[OE_SGX_ENDORSEMENT_FIELD_CRL_PCK_CERT];
-            log("Endorsement: CRL PCK Certificate:\n");
+            log("Endorsement: CRL PCK Certificate:\n%s\n\n", crl_pck_cert.data);
             decode_crl_pem(crl_pck_cert.data, crl_pck_cert.size);
             log("\n");
 
             oe_sgx_endorsement_item crl_pck_proc_ca =
                 endorsements.items[OE_SGX_ENDORSEMENT_FIELD_CRL_PCK_PROC_CA];
-            log("Endorsement: CRL PCK Proc CA:\n");
+            log("Endorsement: CRL PCK Root CA:\n%s\n\n", crl_pck_proc_ca.data);
             decode_crl_pem(crl_pck_proc_ca.data, crl_pck_proc_ca.size);
             log("\n");
 
