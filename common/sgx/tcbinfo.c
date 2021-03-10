@@ -733,10 +733,10 @@ oe_result_t oe_parse_tcb_info_json(
                     i,
                     platform_tcb_level->sgx_tcb_comp_svn[i]);
             OE_TRACE_VERBOSE("pce_svn = 0x%x", platform_tcb_level->pce_svn);
-            // OE_RAISE_MSG(
-            //     OE_TCB_LEVEL_INVALID,
-            //     "Platform TCB (%d) is not up-to-date",
-            //     platform_tcb_level->status);
+            OE_RAISE_MSG(
+                OE_TCB_LEVEL_INVALID,
+                "Platform TCB (%d) is not up-to-date",
+                platform_tcb_level->status);
         }
 
         // Display any advisory IDs as warnings
